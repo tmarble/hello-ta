@@ -11,6 +11,7 @@ spec:
       value: https://github.com/tmarble/hello-ta.git
     - name: revision
       value: 'HEAD'
+    - name: harbor_host
   volumes:
   - name: harbor-secret-volume
     secret:
@@ -18,6 +19,9 @@ spec:
 
   templates:
   - name: hello-ta-ci
+    inputs:
+      parameters:
+      - name: harbor_host
     steps:
     - - name: checkout
         template: checkout
@@ -39,6 +43,9 @@ spec:
         when: "{{workflow.status}} == Running"
         template: publish
         arguments:
+          parameters:
+          - name: harbor_host
+            value: "{{inputs.parameters.harbor_host}}"
           artifacts:
           - name: source
             from: "{{steps.checkout.outputs.artifacts.source}}"
@@ -142,12 +149,15 @@ spec:
           cpu: 100m
       
   - name: publish
+    inputs:
+      parameters:
+      - name: harbor_host
     container:
       image: gcr.io/kaniko-project/executor
       args:
       - "--dockerfile=Dockerfile"
       - "--context=git://github.com/tmarble/hello-ta"
-      - "--destination=entraineur.octet.services/technical-agility/hello-ta:latest"
+      - "--destination={{inputs.parameters.harbor_host}}/technical-agility/hello-ta:latest"
       env:
       - name: DOCKER_CONFIG
         value: /root/.docker

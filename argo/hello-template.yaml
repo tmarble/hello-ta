@@ -1,25 +1,22 @@
 apiVersion: argoproj.io/v1alpha1
-kind: Workflow
+kind: WorkflowTemplate
 metadata:
-  generateName: hello-debug-
+  name: hello-template
 spec:
-  entrypoint: hello-debug
+  entrypoint: verify-host
   arguments:
     parameters:
     - name: harbor_host
-      
   templates:
-  - name: hello-debug
+  - name: verify-host
     inputs:
       parameters:
       - name: harbor_host
     container:
       image: alpine
       command: [sh, -c]
-      args: ['
-        echo "harbor_host: $HARBOR_HOST";
-        ls -ld /*
-      ']
+      args: ['echo "harbor_host: $HARBOR_HOST"']
       env:
       - name: HARBOR_HOST
         value: "{{inputs.parameters.harbor_host}}"
+
