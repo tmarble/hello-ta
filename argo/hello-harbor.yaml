@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: hello-harbor-
+spec:
+  entrypoint: hello-harbor
+  volumes:
+  - name: my-secret-vol
+    secret:
+      secretName: argo-harbor-secret
+  templates:
+  - name: hello-harbor
+    container:
+      image: curlimages/curl
+      command: [sh, -c]
+      args: ['
+        echo "HARBOR_HOST: $HARBOR_HOST";
+        echo "HARBOR_USERNAME: $HARBOR_USERNAME";
+        curl --insecure -v -u ${HARBOR_USERNAME}:${HARBOR_PASSWORD} https://$HARBOR_HOST/api/repositories?project_id=2
+      ']
+      env:
+      - name: HARBOR_HOST
+        value: entraineur.octet.services
+      - name: HARBOR_USERNAME
+        valueFrom:
+          secretKeyRef:
+            name: argo-harbor-secret
+            key: harbor_username
+      - name: HARBOR_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: argo-harbor-secret
+            key: harbor_password
+      volumeMounts:
+      - name: my-secret-vol
+        mountPath: "/mnt"
+        

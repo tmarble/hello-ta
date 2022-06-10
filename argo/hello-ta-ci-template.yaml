@@ -1,0 +1,179 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: hello-ta-ci-template
+spec:
+  entrypoint: hello-ta-ci
+  onExit: exit-handler
+  arguments:
+    parameters:
+    - name: repo
+      value: https://github.com/tmarble/hello-ta.git
+    - name: revision
+      value: 'HEAD'
+  volumes:
+  - name: harbor-secret-volume
+    secret:
+      secretName: harbor-secret
+
+  templates:
+  - name: hello-ta-ci
+    steps:
+    - - name: checkout
+        template: checkout
+    - - name: build
+        when: "{{workflow.status}} == Running"
+        template: build
+        arguments:
+          artifacts:
+          - name: source
+            from: "{{steps.checkout.outputs.artifacts.source}}"
+    - - name: test-e2e
+        when: "{{workflow.status}} == Running"
+        template: test-e2e
+        arguments:
+          artifacts:
+          - name: distribution
+            from: "{{steps.build.outputs.artifacts.distribution}}"
+    - - name: publish
+        when: "{{workflow.status}} == Running"
+        template: publish
+        arguments:
+          artifacts:
+          - name: source
+            from: "{{steps.checkout.outputs.artifacts.source}}"
+
+  - name: checkout
+    inputs:
+      artifacts:
+      - name: source
+        path: /src
+        git:
+          repo: "{{workflow.parameters.repo}}"
+          revision: "{{workflow.parameters.revision}}"
+    outputs:
+      artifacts:
+      - name: source
+        path: /src
+    container:
+      image: python
+      command: ["/bin/sh", "-c"]
+      args: ['
+        cd /src;
+        git status;
+        ls -l;
+        exit 0
+      ']
+
+  - name: build
+    inputs:
+      artifacts:
+      - name: source
+        path: /src
+    outputs:
+      artifacts:
+      - name: distribution
+        path: /src
+    container:
+      image: python
+      command: ["/bin/sh", "-c"]
+      args: ['
+        python3 --version;
+        exit 0;
+      ']
+      resources:
+        requests:
+          memory: 1024Mi
+          cpu: 200m
+
+  - name: test-e2e
+    inputs:
+      artifacts:
+      - name: distribution
+    steps:
+    - - name: hello-ta-server
+        template: hello-ta-daemon
+        arguments:
+          artifacts:
+          - name: distribution
+            from: "{{inputs.artifacts.distribution}}"
+    - - name: hello-ta-client
+        template: curl
+        arguments:
+          parameters:
+          - name: cmd
+            value: curl --silent --output /tmp/index.html --write-out '\n%{stderr}%{http_code}\n' http://{{steps.hello-ta-server.ip}}:8000; grep 'title.Technical Agility' /tmp/index.html
+            
+  - name: hello-ta-daemon
+    inputs:
+      artifacts:
+      - name: distribution
+        path: /src
+    daemon: true
+    container:
+      image: python
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 8000
+        initialDelaySeconds: 2
+        timeoutSeconds: 1
+      command: ["/bin/sh", "-c"]
+      args: ['
+        cd /src;
+        ./run.py
+      ']
+      resources:
+        requests:
+          memory: 512Mi
+          cpu: 250m
+
+  - name: curl
+    inputs:
+      parameters:
+      - name: cmd
+    container:
+      image: curlimages/curl
+      command: ["/bin/sh", "-c"]
+      args: ["{{inputs.parameters.cmd}}"]
+      resources:
+        requests:
+          memory: 32Mi
+          cpu: 100m
+      
+  - name: publish
+    container:
+      image: gcr.io/kaniko-project/executor
+      args:
+      - "--dockerfile=Dockerfile"
+      - "--context=git://github.com/tmarble/hello-ta"
+      - "--destination=entraineur.octet.services/technical-agility/hello-ta:latest"
+      env:
+      - name: DOCKER_CONFIG
+        value: /root/.docker
+      volumeMounts:
+        - name: harbor-secret-volume
+          mountPath: /root/.docker
+      resources:
+        requests:
+          memory: 1024Mi
+          cpu: 200m
+
+  - name: celebrate
+    container:
+      image: alpine:latest
+      command: [sh, -c]
+      args: ["echo hooray!"]
+  - name: cry
+    container:
+      image: alpine:latest
+      command: [sh, -c]
+      args: ["echo boohoo!"]
+  - name: exit-handler
+    steps:
+    - - name: celebrate
+        template: celebrate
+        when: "{{workflow.status}} == Succeeded"
+      - name: cry
+        template: cry
+        when: "{{workflow.status}} != Succeeded"

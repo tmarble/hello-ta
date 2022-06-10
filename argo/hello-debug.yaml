@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: hello-debug-
+spec:
+  entrypoint: hello-debug
+  templates:
+  - name: hello-debug
+    container:
+      image: alpine
+      command: [sh, -c]
+      args: ['
+        echo "harbor_host: $HARBOR_HOST";
+        ls -ld /*
+      ']
+      env:
+      - name: HARBOR_HOST
+        value: entraineur.octet.services
