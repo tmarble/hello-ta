@@ -1,0 +1,20 @@
+#!/bin/sh
+# ncddns
+# namecheap DDNS
+
+NAMECHEAP_HOST=${NAMECHEAP_HOST-smart}
+NAMECHEAP_DOMAIN=${NAMECHEAP_DOMAIN-octet.services}
+
+if [ -z "$NAMECHEAP_PASSWORD" ]; then
+    echo "Please set NAMECHEAP_PASSWORD"
+    exit 1
+fi
+
+ip=$(myip)
+
+echo "Updating DDNS for ${NAMECHEAP_HOST}.${NAMECHEAP_DOMAIN} to $ip"
+
+curl -s -w '\n%{stderr}%{http_code}\n' \
+  "https://dynamicdns.park-your-domain.com/update?host=${NAMECHEAP_HOST}&domain=${NAMECHEAP_DOMAIN}&password=${NAMECHEAP_PASSWORD}&ip=$ip"
+
+
