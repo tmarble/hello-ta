@@ -30,3 +30,6 @@ jobs:
           **Style checker output:** pylint
           ${{ env.MESSAGE }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Verify pylint passes
+      run: |
+        grep "Your code has been rated at 10.00/10" ${{ env.MESSAGE }}
