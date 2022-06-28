@@ -21,12 +21,12 @@ jobs:
     - name: Lint with pylint
       run: |
         echo "MESSAGE<<EOF" >> $GITHUB_ENV
-        pylint ./ --exit-zero >> $GITHUB_ENV
+        pylint $(git ls-files '*.py') >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
     - name: Post result to PR
       uses: thollander/actions-comment-pull-request@v1
       with:
         message: |
-          **Style checker output:** test123
+          **Style checker output:** pylint
           ${{ env.MESSAGE }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
