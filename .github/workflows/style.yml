@@ -1,7 +1,9 @@
 name: style
 
 on:
-  - push
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
@@ -18,13 +20,18 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with pylint
       run: |
+        pylint $(git ls-files '*.py') --exit-zero > pylint.out
         echo "MESSAGE<<EOF" >> $GITHUB_ENV
-        pylint ./ --exit-zero >> $GITHUB_ENV
+        cat pylint.out >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
+        echo "EXITSTATUS=$(grep '10.00/10' pylint.out > /dev/null; echo $?)" >> $GITHUB_ENV
     - name: Post result to PR
       uses: thollander/actions-comment-pull-request@v1
       with:
         message: |
-          **Style checker output:** test123
+          **Style checker output:** pylint
           ${{ env.MESSAGE }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Verify pylint passes
+      run: |
+        exit ${{ env.EXITSTATUS }}
