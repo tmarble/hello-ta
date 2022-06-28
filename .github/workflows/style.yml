@@ -18,8 +18,9 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with pylint
       run: |
-        OUTPUT=$(pylint ./ --exit-zero)
-        echo "MESSAGE=$OUTPUT" >> $GITHUB_ENV
+        echo "MESSAGE<<EOF" >> $GITHUB_ENV
+        pylint ./ --exit-zero >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
     - name: Post result to PR
       uses: thollander/actions-comment-pull-request@v1
       with:
