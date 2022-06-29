@@ -4,7 +4,11 @@ Hello Technical Agility
 
 ## Dependencies
 
-python3
+python3 (including pip3)
+
+```
+pip3 install -r requirements.txt
+```
 
 ## Running
 
@@ -32,3 +36,6 @@ open http://localhost:8080
 
 _NOTE:_ Port 8000 is running inside the container, but exposed locally as 8080
 
+### CI Tests
+
+There is a pre-commit hook to check for secrets based on: https://github.com/Yelp/detect-secrets
